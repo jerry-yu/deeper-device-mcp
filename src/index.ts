@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolResult, GetPromptResult, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 
 let cookie: string | null = null;
@@ -36,13 +36,51 @@ async function loginToDeeperDevice(username: string, password: string): Promise<
         data: cookie,
       };
     }
-
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+async function setDpnMode(mode: string): Promise<boolean> {
+  const url = 'http://192.168.3.57/api/smartRoute/setDpnMode';
+  const headers = {
+    'Host': '192.168.3.57',
+    'Connection': 'keep-alive',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Content-Type': 'application/json',
+    'Origin': 'http://192.168.3.57',
+    'Referer': 'http://192.168.3.57/admin/route-mode',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
+    'Cookie': '' + (cookie || ''), // Use the stored cookie
+  };
+
+  let dpnMode = '';
+  if (mode.includes('direct')) {
+    dpnMode = 'disabled';
+  } else if (mode.includes('smart')) {
+    dpnMode = 'smart';
+  } else if (mode.includes('full')) {
+    dpnMode = 'full';
+  }
+
+  const data = {
+    dpnMode: dpnMode,
+    tunnelCode: 'KR',
+  };
+
+  try {
+    const response = await axios.post(url, data, { headers });
+    console.log('Response data:', response.data);
+    return true;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+  return false;
 }
 
 const getServer = () => {
@@ -52,7 +90,7 @@ const getServer = () => {
     version: '1.0.0',
   }, { capabilities: { logging: {} } });
 
-  
+
   server.tool(
     'loginToDeeperDevice',
     'Login to a Deeper device using the provided username and password.',
@@ -80,6 +118,38 @@ const getServer = () => {
             {
               type: 'text',
               text: `loginToDeeperDevice failed: ${result.error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'set-dpn-mode',
+    'set Deeper device DPN mode.',
+    {
+      dpnMode: z.string().describe("The DPN mode to set: 'direct' for Direct routing, 'smart' for Smart routing, or 'full' for Full routing.").default('smart'),
+    },
+    async ({ dpnMode }): Promise<CallToolResult> => {
+
+      const success = await setDpnMode(dpnMode);
+      if (success) {
+        console.log(`set-dpn-mode successful, dpnMode: ${dpnMode}`);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `set Deeper device DPN mode to ${dpnMode} success`,
+            }
+          ],
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `set Deeper device DPN mode to ${dpnMode} failed`,
             }
           ],
         };
@@ -147,7 +217,7 @@ app.delete('/mcp', async (req: Request, res: Response) => {
 
 
 // Start the server
-const PORT = 3000;
+const PORT = 4000;
 app.listen(PORT, () => {
   console.log(`MCP Stateless Streamable HTTP Server listening on port ${PORT}`);
 });
@@ -157,3 +227,18 @@ process.on('SIGINT', async () => {
   console.log('Shutting down server...');
   process.exit(0);
 });
+
+// async function main() {
+//   const res =await loginToDeeperDevice('admin', 'OGYiunj5DKdgQpZToLza/48IadDkytY1lg1mQG9Tgt3/mc+dO25cTpQwVAg41roIlIPqdORSWpw1PFBHTZ6v+KeZrf0MYwz1Fr7Us9FErN25Q99oT/qeN7uf5dJPrkmBlZCaCtJZh+J7IKgQUvjd2+iuQF6qxxtCxSVJaXeqzp6Hn1YoPpZLvKDoPt+/wSnXlsomkjwdX/qxViI9WyuBlJ83b+4iyH1IDND/wuQZav4S9ZHzxzaLrOwOefh+Q6J6Z1JCcXpMyUDXsg+SW+9ysugmocoBaXCNhpHsLHgWpAUBhpcau9aNPbygc/FhnJk/T3P2MMg3vcvQ83+J1Nfo/A==');
+//   if (res.success) {
+//     cookie = res.data; // Store the cookie for future use
+//     console.log(`Login successful, cookie: ${cookie}`);
+//   }
+
+//   console.log('Set DPN mode response:', await setDpnMode('smart'));
+//     console.log('Set DPN mode response:', await setDpnMode('full'));
+//       console.log('Set DPN mode response:', await setDpnMode('direct'));
+  
+// }
+
+// main().catch(console.error);
