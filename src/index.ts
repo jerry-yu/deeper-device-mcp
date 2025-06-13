@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 
-async function loginToDeeperDevice(username:string,password : string): Promise<any> {
+let cookie: string | null = null;
+
+async function loginToDeeperDevice(username: string, password: string): Promise<any> {
   const url = 'http://192.168.3.57/api/admin/login';
   const headers = {
     Host: '192.168.3.57',
@@ -26,10 +28,15 @@ async function loginToDeeperDevice(username:string,password : string): Promise<a
 
   try {
     const response = await axios.post(url, data, { headers });
-    return {
-      success: true,
-      data: response.data,
-    };
+    const cookies = response.headers['set-cookie'];
+    if (cookies && cookies.length > 0) {
+      const cookie = cookies[0].split(';')[0]; // Extract the first cookie
+      return {
+        success: true,
+        data: cookie,
+      };
+    }
+
   } catch (error) {
     return {
       success: false,
@@ -41,33 +48,11 @@ async function loginToDeeperDevice(username:string,password : string): Promise<a
 const getServer = () => {
   // Create an MCP server with implementation details
   const server = new McpServer({
-    name: 'stateless-streamable-http-server',
+    name: 'deeper-device-operation-http-server',
     version: '1.0.0',
   }, { capabilities: { logging: {} } });
 
-  // Register a simple prompt
-  // server.prompt(
-  //   'greeting-template',
-  //   'A simple greeting prompt template',
-  //   {
-  //     name: z.string().describe('Name to include in greeting'),
-  //   },
-  //   async ({ name }): Promise<GetPromptResult> => {
-  //     return {
-  //       messages: [
-  //         {
-  //           role: 'user',
-  //           content: {
-  //             type: 'text',
-  //             text: `Please greet ${name} in a friendly manner.`,
-  //           },
-  //         },
-  //       ],
-  //     };
-  //   }
-  // );
-
-  // Register a tool specifically for testing resumability
+  
   server.tool(
     'loginToDeeperDevice',
     'Login to a Deeper device using the provided username and password.',
@@ -76,54 +61,32 @@ const getServer = () => {
       password: z.string().describe('The password for authentication.').default('OGYiunj5DKdgQpZToLza/48IadDkytY1lg1mQG9Tgt3/mc+dO25cTpQwVAg41roIlIPqdORSWpw1PFBHTZ6v+KeZrf0MYwz1Fr7Us9FErN25Q99oT/qeN7uf5dJPrkmBlZCaCtJZh+J7IKgQUvjd2+iuQF6qxxtCxSVJaXeqzp6Hn1YoPpZLvKDoPt+/wSnXlsomkjwdX/qxViI9WyuBlJ83b+4iyH1IDND/wuQZav4S9ZHzxzaLrOwOefh+Q6J6Z1JCcXpMyUDXsg+SW+9ysugmocoBaXCNhpHsLHgWpAUBhpcau9aNPbygc/FhnJk/T3P2MMg3vcvQ83+J1Nfo/A=='),
     },
     async ({ username, password }): Promise<CallToolResult> => {
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      let counter = 0;
 
-      while (count === 0 || counter < count) {
-        counter++;
-        try {
-          await sendNotification({
-            method: "notifications/message",
-            params: {
-              level: "info",
-              data: `Periodic notification #${counter} at ${new Date().toISOString()}`
+      const result = await loginToDeeperDevice(username, password);
+      if (result.success) {
+        cookie = result.data; // Store the cookie for future use
+        console.log(`Login successful, cookie: ${cookie}`);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `loginToDeeperDevice success`,
             }
-          });
-        }
-        catch (error) {
-          console.error("Error sending notification:", error);
-        }
-        // Wait for the specified interval
-        await sleep(interval);
+          ],
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `loginToDeeperDevice failed: ${result.error}`,
+            }
+          ],
+        };
       }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Started sending periodic notifications every ${interval}ms`,
-          }
-        ],
-      };
     }
   );
 
-  // Create a simple resource at a fixed URI
-  server.resource(
-    'greeting-resource',
-    'https://example.com/greetings/default',
-    { mimeType: 'text/plain' },
-    async (): Promise<ReadResourceResult> => {
-      return {
-        contents: [
-          {
-            uri: 'https://example.com/greetings/default',
-            text: 'Hello, world!',
-          },
-        ],
-      };
-    }
-  );
   return server;
 }
 
