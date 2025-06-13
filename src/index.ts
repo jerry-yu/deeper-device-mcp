@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { CallToolResult, GetPromptResult, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
@@ -160,73 +161,81 @@ const getServer = () => {
   return server;
 }
 
-const app = express();
-app.use(express.json());
-
-app.post('/mcp', async (req: Request, res: Response) => {
+async function main() {
   const server = getServer();
-  try {
-    const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-    res.on('close', () => {
-      console.log('Request closed');
-      transport.close();
-      server.close();
-    });
-  } catch (error) {
-    console.error('Error handling MCP request:', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message: 'Internal server error',
-        },
-        id: null,
-      });
-    }
-  }
-});
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
 
-app.get('/mcp', async (req: Request, res: Response) => {
-  console.log('Received GET MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
+main().catch(console.error);
 
-app.delete('/mcp', async (req: Request, res: Response) => {
-  console.log('Received DELETE MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
+// const app = express();
+// app.use(express.json());
+
+// app.post('/mcp', async (req: Request, res: Response) => {
+//   const server = getServer();
+//   try {
+//     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
+//       sessionIdGenerator: undefined,
+//     });
+//     await server.connect(transport);
+//     await transport.handleRequest(req, res, req.body);
+//     res.on('close', () => {
+//       console.log('Request closed');
+//       transport.close();
+//       server.close();
+//     });
+//   } catch (error) {
+//     console.error('Error handling MCP request:', error);
+//     if (!res.headersSent) {
+//       res.status(500).json({
+//         jsonrpc: '2.0',
+//         error: {
+//           code: -32603,
+//           message: 'Internal server error',
+//         },
+//         id: null,
+//       });
+//     }
+//   }
+// });
+
+// app.get('/mcp', async (req: Request, res: Response) => {
+//   console.log('Received GET MCP request');
+//   res.writeHead(405).end(JSON.stringify({
+//     jsonrpc: "2.0",
+//     error: {
+//       code: -32000,
+//       message: "Method not allowed."
+//     },
+//     id: null
+//   }));
+// });
+
+// app.delete('/mcp', async (req: Request, res: Response) => {
+//   console.log('Received DELETE MCP request');
+//   res.writeHead(405).end(JSON.stringify({
+//     jsonrpc: "2.0",
+//     error: {
+//       code: -32000,
+//       message: "Method not allowed."
+//     },
+//     id: null
+//   }));
+// });
 
 
-// Start the server
-const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`MCP Stateless Streamable HTTP Server listening on port ${PORT}`);
-});
+// // Start the server
+// const PORT = 4000;
+// app.listen(PORT, () => {
+//   console.log(`MCP Stateless Streamable HTTP Server listening on port ${PORT}`);
+// });
 
-// Handle server shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
-  process.exit(0);
-});
+// // Handle server shutdown
+// process.on('SIGINT', async () => {
+//   console.log('Shutting down server...');
+//   process.exit(0);
+// });
 
 // async function main() {
 //   const res =await loginToDeeperDevice('admin', 'OGYiunj5DKdgQpZToLza/48IadDkytY1lg1mQG9Tgt3/mc+dO25cTpQwVAg41roIlIPqdORSWpw1PFBHTZ6v+KeZrf0MYwz1Fr7Us9FErN25Q99oT/qeN7uf5dJPrkmBlZCaCtJZh+J7IKgQUvjd2+iuQF6qxxtCxSVJaXeqzp6Hn1YoPpZLvKDoPt+/wSnXlsomkjwdX/qxViI9WyuBlJ83b+4iyH1IDND/wuQZav4S9ZHzxzaLrOwOefh+Q6J6Z1JCcXpMyUDXsg+SW+9ysugmocoBaXCNhpHsLHgWpAUBhpcau9aNPbygc/FhnJk/T3P2MMg3vcvQ83+J1Nfo/A==');
