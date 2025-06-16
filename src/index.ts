@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { randomUUID } from 'node:crypto';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { z } from 'zod';
 import { CallToolResult, isInitializeRequest, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
@@ -175,137 +176,76 @@ const MCP_PORT = 3000;
 const app = express();
 app.use(express.json());
 
-// Map to store transports by session ID
-const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+// Store transports by session ID
+const transports: Record<string, SSEServerTransport> = {};
 
-// MCP POST endpoint with optional auth
-const mcpPostHandler = async (req: Request, res: Response) => {
-  console.log('Received MCP request:', req.body);
+// SSE endpoint for establishing the stream
+app.get('/sse', async (req: Request, res: Response) => {
+  console.log('Received GET request to /sse (establishing SSE stream)');
+
   try {
-    // Check for existing session ID
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    let transport: StreamableHTTPServerTransport;
+    // Create a new SSE transport for the client
+    // The endpoint for POST messages is '/messages'
+    const transport = new SSEServerTransport('/sse', res);
 
-    if (sessionId && transports[sessionId]) {
-      // Reuse existing transport
-      transport = transports[sessionId];
-    } else if (!sessionId && isInitializeRequest(req.body)) {
-      // New initialization request
-      //const eventStore = new InMemoryEventStore();
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        //eventStore, // Enable resumability
-        onsessioninitialized: (sessionId) => {
-          // Store the transport by session ID when session is initialized
-          // This avoids race conditions where requests might come in before the session is stored
-          console.log(`Session initialized with ID: ${sessionId}`);
-          transports[sessionId] = transport;
-        }
-      });
+    // Store the transport by session ID
+    const sessionId = transport.sessionId;
+    transports[sessionId] = transport;
 
-      // Set up onclose handler to clean up transport when closed
-      transport.onclose = () => {
-        const sid = transport.sessionId;
-        if (sid && transports[sid]) {
-          console.log(`Transport closed for session ${sid}, removing from transports map`);
-          delete transports[sid];
-        }
-      };
+    // Set up onclose handler to clean up transport when closed
+    transport.onclose = () => {
+      console.log(`SSE transport closed for session ${sessionId}`);
+      delete transports[sessionId];
+    };
 
-      // Connect the transport to the MCP server BEFORE handling the request
-      // so responses can flow back through the same transport
-      const server = getServer();
-      await server.connect(transport);
+    // Connect the transport to the MCP server
+    const server = getServer();
+    await server.connect(transport);
 
-      await transport.handleRequest(req, res, req.body);
-      return; // Already handled
-    } else {
-      // Invalid request - no session ID or not initialization request
-      res.status(400).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32000,
-          message: 'Bad Request: No valid session ID provided',
-        },
-        id: null,
-      });
-      return;
-    }
-
-    // Handle the request with existing transport - no need to reconnect
-    // The existing transport is already connected to the server
-    await transport.handleRequest(req, res, req.body);
+    console.log(`Established SSE stream with session ID: ${sessionId}`);
   } catch (error) {
-    console.error('Error handling MCP request:', error);
+    console.error('Error establishing SSE stream:', error);
     if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message: 'Internal server error',
-        },
-        id: null,
-      });
+      res.status(500).send('Error establishing SSE stream');
     }
   }
-};
+});
 
-// Set up routes with conditional auth middleware
+// Messages endpoint for receiving client JSON-RPC requests
+app.post('/sse', async (req: Request, res: Response) => {
+  console.log('Received POST request to /sse');
 
-app.post('/mcp', mcpPostHandler);
+  // Extract session ID from URL query parameter
+  // In the SSE protocol, this is added by the client based on the endpoint event
+  const sessionId = req.query.sessionId as string | undefined;
 
-// Handle GET requests for SSE streams (using built-in support from StreamableHTTP)
-const mcpGetHandler = async (req: Request, res: Response) => {
-  const sessionId = req.headers['mcp-session-id'] as string | undefined;
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send('Invalid or missing session ID');
+  if (!sessionId) {
+    console.error('No session ID provided in request URL');
+    res.status(400).send('Missing sessionId parameter');
     return;
-  }
-
-  // Check for Last-Event-ID header for resumability
-  const lastEventId = req.headers['last-event-id'] as string | undefined;
-  if (lastEventId) {
-    console.log(`Client reconnecting with Last-Event-ID: ${lastEventId}`);
-  } else {
-    console.log(`Establishing new SSE stream for session ${sessionId}`);
   }
 
   const transport = transports[sessionId];
-  await transport.handleRequest(req, res);
-};
-
-// Set up GET route with conditional auth middleware
-
-app.get('/mcp', mcpGetHandler);
-
-
-// Handle DELETE requests for session termination (according to MCP spec)
-const mcpDeleteHandler = async (req: Request, res: Response) => {
-  const sessionId = req.headers['mcp-session-id'] as string | undefined;
-  if (!sessionId || !transports[sessionId]) {
-    res.status(400).send('Invalid or missing session ID');
+  if (!transport) {
+    console.error(`No active transport found for session ID: ${sessionId}`);
+    res.status(404).send('Session not found');
     return;
   }
 
-  console.log(`Received session termination request for session ${sessionId}`);
-
   try {
-    const transport = transports[sessionId];
-    await transport.handleRequest(req, res);
+    // Handle the POST message with the transport
+    await transport.handlePostMessage(req, res, req.body);
   } catch (error) {
-    console.error('Error handling session termination:', error);
+    console.error('Error handling request:', error);
     if (!res.headersSent) {
-      res.status(500).send('Error processing session termination');
+      res.status(500).send('Error handling request');
     }
   }
-};
+});
 
-// Set up DELETE route with conditional auth middleware
-
-app.delete('/mcp', mcpDeleteHandler);
-
+// Start the server
 app.listen(MCP_PORT, () => {
-  console.log(`MCP Streamable HTTP Server listening on port ${MCP_PORT}`);
+  console.log(`Simple SSE Server listening on port ${MCP_PORT}`);
 });
 
 // Handle server shutdown
@@ -325,3 +265,35 @@ process.on('SIGINT', async () => {
   console.log('Server shutdown complete');
   process.exit(0);
 });
+
+// async function handleSSE(req: http.IncomingMessage, res: http.ServerResponse, url: URL, sessions: Map<string, SSEServerTransport>) {
+//   const server = getServer();
+//   if (req.method === 'POST') {
+//     const sessionId = url.searchParams.get('sessionId');
+//     if (!sessionId) {
+//       res.statusCode = 400;
+//       return res.end('Missing sessionId');
+//     }
+
+//     const transport = sessions.get(sessionId);
+//     if (!transport) {
+//       res.statusCode = 404;
+//       return res.end('Session not found');
+//     }
+
+//     return await transport.handlePostMessage(req, res);
+//   } else if (req.method === 'GET') {
+//     const transport = new SSEServerTransport('/sse', res);
+//     sessions.set(transport.sessionId, transport);
+//     await server.connect(transport);
+//     res.on('close', () => {
+//       sessions.delete(transport.sessionId);
+//       // eslint-disable-next-line no-console
+//       server.close().catch(e => console.error(e));
+//     });
+//     return;
+//   }
+
+//   res.statusCode = 405;
+//   res.end('Method not allowed');
+// }
