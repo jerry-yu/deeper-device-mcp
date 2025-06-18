@@ -2,15 +2,25 @@ import express, { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { randomUUID } from 'node:crypto';
+import { publicEncrypt } from 'node:crypto';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { z } from 'zod';
 import { CallToolResult, isInitializeRequest, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
+import publicKey from './public';
 
 let cookie: string | null = null;
 
+export const encryptWithPublicKey = function (string: string) {
+  if (string) {
+    const encrypted = publicEncrypt(publicKey, Buffer.from(string));
+    return encrypted.toString('base64');
+  }
+  return '';
+};
+
 async function loginToDeeperDevice(username: string, password: string): Promise<any> {
+  password = encryptWithPublicKey(password);
   const url = 'http://192.168.3.57/api/admin/login';
   const headers = {
     Host: '192.168.3.57',
@@ -99,7 +109,7 @@ const getServer = () => {
     'Login to a Deeper device using the provided username and password.',
     {
       username: z.string().describe('The username for authentication.').default('admin'),
-      password: z.string().describe('The password for authentication.').default('OGYiunj5DKdgQpZToLza/48IadDkytY1lg1mQG9Tgt3/mc+dO25cTpQwVAg41roIlIPqdORSWpw1PFBHTZ6v+KeZrf0MYwz1Fr7Us9FErN25Q99oT/qeN7uf5dJPrkmBlZCaCtJZh+J7IKgQUvjd2+iuQF6qxxtCxSVJaXeqzp6Hn1YoPpZLvKDoPt+/wSnXlsomkjwdX/qxViI9WyuBlJ83b+4iyH1IDND/wuQZav4S9ZHzxzaLrOwOefh+Q6J6Z1JCcXpMyUDXsg+SW+9ysugmocoBaXCNhpHsLHgWpAUBhpcau9aNPbygc/FhnJk/T3P2MMg3vcvQ83+J1Nfo/A=='),
+      password: z.string().describe('The password for authentication.').default('yubo12345'),
     },
     async ({ username, password }): Promise<CallToolResult> => {
 
