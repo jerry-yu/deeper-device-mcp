@@ -2,7 +2,12 @@ import { publicEncrypt } from "node:crypto";
 import publicKey from './public';
 import axios from 'axios';
 
+//export let BaseUrl = '34.34.34.34';
+let BaseUrl = '192.168.3.57';
 
+const setBaseUrl = function (url: string) {
+    BaseUrl = url;
+}
 
 const encryptWithPublicKey = function (string: string) {
     if (string) {
@@ -12,20 +17,22 @@ const encryptWithPublicKey = function (string: string) {
     return '';
 };
 
-async function loginToDeeperDevice(username: string, password: string): Promise<any> {
-    password = encryptWithPublicKey(password);
-    const url = 'http://192.168.3.57/api/admin/login';
-    const headers = {
-        Host: '192.168.3.57',
-        Connection: 'keep-alive',
-        //'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-        Accept: 'application/json, text/plain, */*',
+const getDefaultHeaders = function (cookie?: string) {
+    return {
+        'Host': BaseUrl,
+        'Connection': 'keep-alive',
+        'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
-       // Origin: 'http://192.168.3.57',
-        //Referer: 'http://192.168.3.57/login',
         'Accept-Encoding': 'gzip, deflate',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
+        'Cookie': cookie || '',
     };
+};
+
+async function loginToDeeperDevice(username: string, password: string): Promise<any> {
+    password = encryptWithPublicKey(password);
+    const url = `http://${BaseUrl}/api/admin/login`;
+    const headers = getDefaultHeaders();
 
     const data = {
         username: username,
@@ -51,19 +58,8 @@ async function loginToDeeperDevice(username: string, password: string): Promise<
 }
 
 async function setDpnMode(cookie: string, mode: string, tunnelCode: string): Promise<boolean> {
-    const url = 'http://192.168.3.57/api/smartRoute/setDpnMode';
-    const headers = {
-        'Host': '192.168.3.57',
-        'Connection': 'keep-alive',
-        //'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/json',
-        //'Origin': 'http://192.168.3.57',
-        //'Referer': 'http://192.168.3.57/admin/route-mode',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-        'Cookie': '' + (cookie || ''), // Use the stored cookie
-    };
+    const url = `http://${BaseUrl}/api/smartRoute/setDpnMode`;
+    const headers = getDefaultHeaders(cookie);
 
     let dpnMode = '';
     if (mode.includes('direct')) {
@@ -76,13 +72,13 @@ async function setDpnMode(cookie: string, mode: string, tunnelCode: string): Pro
 
     const data = {
         dpnMode: dpnMode,
-        tunnelCode: tunnelCode || 'KR',
+        tunnelCode: tunnelCode,
     };
 
     try {
         const response = await axios.post(url, data, { headers });
-        console.log('Response data:', response.data);
-        return true;
+        console.log('setDpnMode response data:', response.data);
+        return response.data && response.data.success === true;
     } catch (error) {
         console.error('Error:', error);
     }
@@ -90,17 +86,8 @@ async function setDpnMode(cookie: string, mode: string, tunnelCode: string): Pro
 }
 
 async function listTunnels(cookie: string): Promise<any> {
-    const url = 'http://192.168.3.57/api/smartRoute/listTunnels';
-    const headers = {
-        'Host': '192.168.3.57',
-        'Connection': 'keep-alive',
-        //'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        //'Referer': 'http://192.168.3.57/admin/app-relocator',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-        'Cookie': cookie || '',
-    };
+    const url = `http://${BaseUrl}/api/smartRoute/listTunnels`;
+    const headers = getDefaultHeaders(cookie);
 
     try {
         const response = await axios.get(url, { headers });
@@ -117,16 +104,8 @@ async function listTunnels(cookie: string): Promise<any> {
 }
 
 async function getDpnMode(cookie: string): Promise<any> {
-    const url = 'http://192.168.3.57/api/smartRoute/getDpnMode';
-    const headers = {
-        'Host': '192.168.3.57',
-        'Connection': 'keep-alive',
-        // 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-        'Cookie': cookie || '',
-    };
+    const url = `http://${BaseUrl}/api/smartRoute/getDpnMode`;
+    const headers = getDefaultHeaders(cookie);
 
     try {
         const response = await axios.get(url, { headers });
@@ -143,4 +122,83 @@ async function getDpnMode(cookie: string): Promise<any> {
     }
 }
 
-export { loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode };
+async function listApps(cookie: string): Promise<any> {
+    const url = `http://${BaseUrl}/api/appRelocator/apps`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        const data = response.data;
+        if (Array.isArray(data)) {
+            const categoryObj = data.find((item: any) => item.category === 'allCategories');
+            if (categoryObj && Array.isArray(categoryObj.appsBySubcategory)) {
+                const subcatObj = categoryObj.appsBySubcategory.find((sub: any) => sub.subcategory === 'allCountries');
+                if (subcatObj && Array.isArray(subcatObj.apps)) {
+                    const appNames = subcatObj.apps.map((app: any) => app.app);
+                    return {
+                        success: true,
+                        data: appNames,
+                    };
+                }
+            }
+        }
+        return {
+            success: false,
+            error: 'Invalid data structure for fetching apps',
+        };
+    } catch (error) {
+        console.error('Error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function addApp(cookie: string, appName: string, tunnelCode: string): Promise<any> {
+    const url = `http://${BaseUrl}/api/appRelocator/addApp`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        appName,
+        tunnelCode,
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+            data: {},
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function addTunnel(cookie: string, regionCode: string, countryCode: string): Promise<any> {
+    const url = `http://${BaseUrl}/api/smartRoute/addTunnel`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        regionCode,
+        countryCode,
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+            data: {}
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+export { loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
