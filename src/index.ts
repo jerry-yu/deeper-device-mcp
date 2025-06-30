@@ -24,14 +24,70 @@ const getServer = () => {
     version: '1.0.0',
   }, {
     capabilities: { logging: {} },
-    instructions: `deeper device has 2 code: tunnel code and region code.tunnelcode is the English abbreviation of the country name, which is used to specify the country where the proxy for the traffic used by the dpnmode of the deeper device is located.Below is the mapping between the abbreviations and the actual country names: {"OCP":"Polynesia","OCA":"Australia & New Zealand","OCM":"Melanesia","OCN":"Micronesia","AD":"Andorra","AE":"United Arab Emirates","AF":"Afghanistan","AG":"Antigua and Barbuda","AI":"Anguilla","AL":"Albania","AM":"Armenia","AO":"Angola","AR":"Argentina","AS":"American Samoa","AT":"Austria","AU":"Australia","AW":"Aruba","AX":"Åland Islands","AZ":"Azerbaijan","BA":"Bosnia and Herzegovina","BB":"Barbados","BD":"Bangladesh","BE":"Belgium","BF":"Burkina Faso","BG":"Bulgaria","BH":"Bahrain","BI":"Burundi","BJ":"Benin","BL":"Saint Barthélemy","BM":"Bermuda","BN":"Brunei Darussalam","BO":"Bolivia","BQ":"Bonaire, Sint Eustatius and Saba","BR":"Brazil","BS":"Bahamas","BT":"Bhutan","BW":"Botswana","BY":"Belarus","BZ":"Belize","CA":"Canada","CC":"Cocos (Keeling) Islands","CD":"Congo, Democratic Republic of the","CF":"Central African Republic","CG":"Congo","CH":"Switzerland","CI":"Ivory Coast","CK":"Cook Islands","CL":"Chile","CM":"Cameroon","CN":"China","CO":"Colombia","CR":"Costa Rica","CU":"Cuba","CV":"Cabo Verde","CW":"Curaçao","CX":"Christmas Island","CY":"Cyprus","CZ":"Czechia","DE":"Germany","DJ":"Djibouti","DK":"Denmark","DM":"Dominica","DO":"Dominican Republic","DZ":"Algeria","EC":"Ecuador","EE":"Estonia","EG":"Egypt","ER":"Eritrea","ES":"Spain","ET":"Ethiopia","FI":"Finland","FJ":"Fiji","FK":"Falkland Islands (Malvinas)","FM":"Micronesia (Federated States of)","FO":"Faroe Islands","FR":"France","GA":"Gabon","GB":"United Kingdom of Great Britain and Northern Ireland","GD":"Grenada","GE":"Georgia","GF":"French Guiana","GG":"Guernsey","GH":"Ghana","GI":"Gibraltar","GL":"Greenland","GM":"Gambia","GN":"Guinea","GP":"Guadeloupe","GQ":"Equatorial Guinea","GR":"Greece","GS":"South Georgia and the South Sandwich Islands","GT":"Guatemala","GU":"Guam","GW":"Guinea-Bissau","GY":"Guyana","HK":"Hong Kong (China)","HN":"Honduras","HR":"Croatia","HT":"Haiti","HU":"Hungary","ID":"Indonesia","IE":"Ireland","IL":"Israel","IM":"Isle of Man","IN":"India","IO":"British Indian Ocean Territory","IQ":"Iraq","IR":"Iran","IS":"Iceland","IT":"Italy","JE":"Jersey","JM":"Jamaica","JO":"Jordan","JP":"Japan","KE":"Kenya","KG":"Kyrgyzstan","KH":"Cambodia","KI":"Kiribati","KM":"Comoros","KN":"Saint Kitts and Nevis","KR":"South Korea","KW":"Kuwait","KY":"Cayman Islands","KZ":"Kazakhstan","KP":"North korea","LA":"Lao People's Democratic Republic","LB":"Lebanon","LC":"Saint Lucia","LI":"Liechtenstein","LK":"Sri Lanka","LR":"Liberia","LS":"Lesotho","LT":"Lithuania","LU":"Luxembourg","LV":"Latvia","LY":"Libya","MA":"Morocco","MC":"Monaco","MD":"Moldova, Republic of","ME":"Montenegro","MF":"Saint Martin (French part)","MG":"Madagascar","MH":"Marshall Islands","MK":"North Macedonia","ML":"Mali","MM":"Myanmar","MN":"Mongolia","MO":"Macao (China)","MP":"Northern Mariana Islands","MQ":"Martinique","MR":"Mauritania","MS":"Montserrat","MT":"Malta","MU":"Mauritius","MV":"Maldives","MW":"Malawi","MX":"Mexico","MY":"Malaysia","MZ":"Mozambique","NA":"Namibia","NC":"New Caledonia","NE":"Niger","NF":"Norfolk Island","NG":"Nigeria","NI":"Nicaragua","NL":"Netherlands","NO":"Norway","NP":"Nepal","NR":"Nauru","NU":"Niue","NZ":"New Zealand","OM":"Oman","PA":"Panama","PE":"Peru","PF":"French Polynesia","PG":"Papua New Guinea","PH":"Philippines","PK":"Pakistan","PL":"Poland","PM":"Saint Pierre and Miquelon","PN":"Pitcairn","PR":"Puerto Rico","PS":"Palestine, State of","PT":"Portugal","PW":"Palau","PY":"Paraguay","QA":"Qatar","RE":"Réunion","RO":"Romania","RS":"Serbia","RU":"Russian Federation","RW":"Rwanda","SA":"Saudi Arabia","SB":"Solomon Islands","SC":"Seychelles","SD":"Sudan","SE":"Sweden","SG":"Singapore","SH":"Saint Helena, Ascension and Tristan da Cunha","SI":"Slovenia","SJ":"Svalbard and Jan Mayen","SK":"Slovakia","SL":"Sierra Leone","SM":"San Marino","SN":"Senegal","SO":"Somalia","SR":"Suriname","SS":"South Sudan","ST":"Sao Tome and Principe","SV":"El Salvador","SX":"Sint Maarten (Dutch part)","SY":"Syrian Arab Republic","SZ":"Eswatini","TC":"Turks and Caicos Islands","TD":"Chad","TF":"French Southern Territories","TG":"Togo","TH":"Thailand","TJ":"Tajikistan","TK":"Togo","TL":"Timor-Leste","TM":"Turkmenistan","TN":"Tunisia","TO":"Tonga","TR":"Turkey","TT":"Trinidad and Tobago","TV":"Tuvalu","TW":"Taiwan (China)","TZ":"Tanzania, United Republic of","UA":"Ukraine","UB":"US West","UC":"US Midwest","UD":"US Southwest","UE":"US Northeast","UF":"US Southeast","UG":"Uganda","US":"United States of America","UY":"Uruguay","UZ":"Uzbekistan","VA":"Holy See","VC":"Saint Vincent and the Grenadines","VE":"Venezuela","VG":"Virgin Islands (British)","VI":"Virgin Islands (U.S.)","VN":"Vietnam","VU":"Vanuatu","WF":"Wallis and Futuna","WS":"Samoa","XK":"Kosovo","YE":"Yemen","YT":"Mayotte","ZA":"South Africa","ZM":"Zambia","ZW":"Zimbabwe"}; 
-region code where the tunnel code country is located is the English abbreviation.Below is the mapping between the abbreviations and the actual region code:{"AMN":"North America","AMC":"the Caribbean","AMM":"Central America","AMS":"South America","ASC":"Central Asia","ASE":"East Asia","ASW":"West Asia","ASS":"South Asia","ASD":"Southeast Asia","AFN":"North Africa","AFM":"Middle Africa","AFE":"East Africa","AFW":"West Africa","AFS":"South Africa","EUN":"North Europe","EUE":"East Europe","EUW":"West Europe","EUS":"South Europe","OCP":"Polynesia","OCA":"Australia & New Zealand","OCM":"Melanesia","OCN":"Micronesia"}.
-`});
+    instructions: `# Deeper Device Control Protocol
+
+You are an agent controlling a Deeper Network device. Follow these instructions to manage the device's DPN (Decentralized Private Network) settings.
+
+## Core Concepts
+
+*   **DPN Mode**: Determines how your internet traffic is routed.
+    *   **direct**: Bypasses the DPN.
+    *   **smart**: Routes traffic through the DPN based on intelligent rules.
+    *   **full**: Routes all traffic through the DPN.
+*   **Tunnel**: A secure connection to a specific country's server, used in 'smart' and 'full' DPN modes.
+*   **Tunnel Code**: A two-letter country code (e.g., 'US', 'JP') that identifies a tunnel.
+*   **Region Code**: A code representing a continent or major region (e.g., 'AMN' for North America, 'EUE' for East Europe). Tunnels are grouped by region.
+*   **App Tunnel**: You can assign a specific tunnel to individual applications, overriding the main DPN mode for that app.
+
+## Workflow
+
+1.  **Login**: Always start by logging into the device using the 'loginToDeeperDevice' tool. This is a mandatory first step.
+2.  **Check Status**: Use 'getDpnMode' to see the current DPN mode and the tunnels assigned to 'smart' and 'full' modes.
+3.  **List Tunnels**: Use 'listTunnels' to see the list of currently active tunnels you can use.
+4.  **Add Tunnels (If Needed)**: If the tunnel you want to use is not in the active list, you must add it first using the 'addTunnel' tool. This requires both a 'tunnelCode' and its corresponding 'regionCode'.
+5.  **Set DPN Mode**: Use 'setDpnMode' to change the global DPN mode. You must provide the 'tunnelCode' you want to use for that mode.
+6.  **Manage Apps**:
+    *   Use 'listApps' to see all applications that can have their own tunnel settings.
+    *   Use 'setAppTunnelCode' to assign a specific 'tunnelCode' to an application.
+
+## Reference: Region and Tunnel Codes
+
+### Region Codes
+| Code  | Region                  |
+| :---- | :---------------------- |
+| AMN   | North America           |
+| AMC   | The Caribbean           |
+| AMM   | Central America         |
+| AMS   | South America           |
+| ASC   | Central Asia            |
+| ASE   | East Asia               |
+| ASW   | West Asia               |
+| ASS   | South Asia              |
+| ASD   | Southeast Asia          |
+| AFN   | North Africa            |
+| AFM   | Middle Africa           |
+| AFE   | East Africa             |
+| AFW   | West Africa             |
+| AFS   | South Africa            |
+| EUN   | North Europe            |
+| EUE   | East Europe             |
+| EUW   | West Europe             |
+| EUS   | South Europe            |
+| OCP   | Polynesia               |
+| OCA   | Australia & New Zealand |
+| OCM   | Melanesia               |
+| OCN   | Micronesia              |
+
+### Tunnel Codes (Country Codes)
+A two-letter code representing the country. Refer to standard ISO 3166-1 alpha-2 country codes.
+Example: 'US' for United States, 'CA' for Canada, 'DE' for Germany.
+The full list of available tunnel codes can be retrieved via the 'listTunnels' tool after logging in.`
+});
 
 
   server.tool(
     'loginToDeeperDevice',
-    'Login to a Deeper device using the provided username and password.',
+    'Logs into the Deeper device to establish a session and obtain an auth cookie.',
     {
       username: z.string().describe('The username for authentication.').default('admin'),
       password: z.string().describe('The password for authentication.').default('yubo12345'),
@@ -65,7 +121,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'setDpnMode',
-    'set Deeper device DPN mode.',
+    'Sets the DPN mode and the associated tunnel for that mode.',
     {
       dpnMode: z.string().describe("The DPN mode to set: 'direct' for Direct routing, 'smart' for Smart routing, or 'full' for Full routing.").default('smart'),
       tunnelCode: z.string().describe(`tunnel code`).nullable(),
@@ -122,7 +178,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'listTunnels',
-    'Retrieve the active tunnel codes available for configuring the DPN mode.',
+    'Lists the active tunnels available for DPN configuration.',
     {},
     async (): Promise<CallToolResult> => {
       if (!cookie) {
@@ -172,7 +228,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'getDpnMode',
-    'Get the current DPN mode settings for the Deeper device.',
+    'Retrieves the current DPN mode and the tunnels assigned to "smart" and "full" modes.',
     {},
     async (): Promise<CallToolResult> => {
       if (!cookie) {
@@ -235,7 +291,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'listApps',
-    'Get the list of all app names supported by the Deeper device.',
+    'Lists all applications that can have their own dedicated DPN tunnel.',
     {},
     async (): Promise<CallToolResult> => {
       if (!cookie) {
@@ -285,7 +341,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'setAppTunnelCode',
-    'Set the tunnel code used by the App, supported by the Deeper device, for network traffic transmission.',
+    'Assigns a specific tunnel to an application, overriding the main DPN mode for that app.',
     {
       appName: z.string().describe('The name of the app to set.'),
       tunnelCode: z.string().describe('The tunnel code to use for the app, if using Direct Access, the tunnel code is LL.'),
@@ -338,7 +394,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'setBaseUrl',
-    'Set the base URL for the Deeper device API. Default is 34.34.34.34.',
+    'Configures the base URL for API calls to the Deeper device. Default: 34.34.34.34.',
     {
       baseUrl: z.string().describe('The base URL to use for the Deeper device API.').default('34.34.34.34'),
     },
@@ -357,7 +413,7 @@ region code where the tunnel code country is located is the English abbreviation
 
   server.tool(
     'addTunnel',
-    'Add a new tunnel to the Deeper device using the specified tunnel code and region code.',
+    'Adds a new tunnel to the active list, making it available for DPN configuration.',
     {
       regionCode: z.string().describe(`Regin code`),
       tunnelCode: z.string().describe('Tunnel code to add.'),

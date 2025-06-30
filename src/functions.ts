@@ -2,7 +2,7 @@ import { publicEncrypt } from "node:crypto";
 import publicKey from './public';
 import axios from 'axios';
 
-//export let BaseUrl = '34.34.34.34';
+//let BaseUrl = '34.34.34.34';
 let BaseUrl = '192.168.3.57';
 
 const setBaseUrl = function (url: string) {
