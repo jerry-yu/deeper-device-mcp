@@ -4,9 +4,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import { z } from 'zod';
+import { nullable, z } from 'zod';
 import { CallToolResult, isInitializeRequest, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
-import { loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, setBaseUrl, addTunnel } from './functions';
+import { getUrlFilterData, setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, setBaseUrl, addTunnel } from './functions';
 
 let cookie: string | null = null;
 
@@ -82,7 +82,7 @@ You are an agent controlling a Deeper Network device. Follow these instructions 
 A two-letter code representing the country. Refer to standard ISO 3166-1 alpha-2 country codes.
 Example: 'US' for United States, 'CA' for Canada, 'DE' for Germany.
 The full list of available tunnel codes can be retrieved via the 'listTunnels' tool after logging in.`
-});
+  });
 
 
   server.tool(
@@ -463,6 +463,93 @@ The full list of available tunnel codes can be retrieved via the 'listTunnels' t
     }
   );
 
+  server.tool(
+    'setParentalControl',
+    'Configures parental control states for porn, social, and game categories. Supports blocking, timed unblocking, or unblocking. Only changed states will be updated.',
+    {
+      porn: z.number().nullable().describe('Porn category state: 0 (not block), 1 (block), 2 (unblock 2 hours), 4 (unblock 4 hours), 8 (unblock 8 hours)'),
+      social: z.number().nullable().describe('Social category state: 0 (not block), 1 (block), 2 (unblock 2 hours), 4 (unblock 4 hours), 8 (unblock 8 hours)'),
+      game: z.number().nullable().describe('Game category state: 0 (not block), 1 (block), 2 (unblock 2 hours), 4 (unblock 4 hours), 8 (unblock 8 hours)'),
+    },
+    async ({ porn, social, game }): Promise<CallToolResult> => {
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const filterDataResult = await getUrlFilterData(cookie);
+        if (!filterDataResult.success || !filterDataResult.data) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to get current parental control states: ${filterDataResult.error}`,
+              }
+            ],
+          };
+        }
+        let current = filterDataResult.data;
+        console.log('Current parental control states:', current);
+
+        const pornStateChanged = (porn !== null);
+        const socialStateChanged = (social !== null);
+        const gameStateChanged = (game !== null);
+
+        if (pornStateChanged) {
+          current.porn = porn;
+        }
+        if (socialStateChanged) {
+          current.social = social;
+        }
+        if (gameStateChanged) {
+          current.game = game;
+        }
+        console.log('Updated parental control states:', current);
+        console.log('Changes:', pornStateChanged, socialStateChanged, gameStateChanged);
+
+        const setResult = await setCategoryStates(cookie, current, pornStateChanged, socialStateChanged, gameStateChanged);
+        if (setResult) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Parental control updated. Changed: ${[
+                  pornStateChanged ? 'porn' : null,
+                  socialStateChanged ? 'social' : null,
+                  gameStateChanged ? 'game' : null
+                ].filter(Boolean).join(', ') || 'none'}.`,
+              }
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to update parental control states.`,
+              }
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `setParentalControl error: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
   return server;
 }
 
@@ -508,9 +595,45 @@ async function main() {
 
 //   const addResult = await addApp(cookie, 'nbaLeaguePass', 'KR');
 //   if (addResult.success) {
-//     console.log('App added successfully:', addResult.data);
+//     console.log('App added successfully:');
 //   } else {
 //     console.error('Failed to add app:', addResult.error);
+//   }
+
+//   const urlFilterData = await getUrlFilterData(cookie);
+//   if (urlFilterData.success && urlFilterData.data) {
+//     console.log('Current URL filter data:', urlFilterData.data);
+//   }
+//   else {
+//     console.error('Failed to get URL filter data:', urlFilterData.error);
+//   }
+
+//   let curFilterData = urlFilterData.data;
+//   if (!curFilterData) {
+//     console.error('No URL filter data found, initializing with default values.');
+//     return;
+//   }
+
+//   if (curFilterData.porn === 0) {
+//     curFilterData.porn = 4; //
+//   } else {
+//     curFilterData.porn = 0;
+//   }
+
+//   const parentalControlResult = await setCategoryStates(cookie, curFilterData, true, false, false);
+//   if (parentalControlResult) {
+//     console.log('Parental control states updated successfully.');
+//   }
+//   else {
+//     console.error('Failed to update parental control states.');
+//   }
+
+//   const urlFilterData2 = await getUrlFilterData(cookie);
+//   if (urlFilterData2.success && urlFilterData2.data) {
+//     console.log('Current URL filter data:', urlFilterData2.data);
+//   }
+//   else {
+//     console.error('Failed to get URL filter data:', urlFilterData2.error);
 //   }
 // }
 

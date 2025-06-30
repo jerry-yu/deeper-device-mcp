@@ -2,8 +2,9 @@ import { publicEncrypt } from "node:crypto";
 import publicKey from './public';
 import axios from 'axios';
 
-//let BaseUrl = '34.34.34.34';
-let BaseUrl = '192.168.3.57';
+
+let BaseUrl = '34.34.34.34';
+//let BaseUrl = '192.168.3.57';
 
 const setBaseUrl = function (url: string) {
     BaseUrl = url;
@@ -155,7 +156,7 @@ async function listApps(cookie: string): Promise<any> {
     }
 }
 
-async function addApp(cookie: string, appName: string, tunnelCode: string): Promise<any> {
+async function addApp(cookie: string, appName: string, tunnelCode: string): Promise<{ success: boolean; error?: string }> {
     const url = `http://${BaseUrl}/api/appRelocator/addApp`;
     const headers = getDefaultHeaders(cookie);
 
@@ -168,7 +169,6 @@ async function addApp(cookie: string, appName: string, tunnelCode: string): Prom
         const response = await axios.post(url, data, { headers });
         return {
             success: response.data && response.data.success === true,
-            data: {},
         };
     } catch (error) {
         return {
@@ -178,7 +178,7 @@ async function addApp(cookie: string, appName: string, tunnelCode: string): Prom
     }
 }
 
-async function addTunnel(cookie: string, regionCode: string, countryCode: string): Promise<any> {
+async function addTunnel(cookie: string, regionCode: string, countryCode: string): Promise<{ success: boolean; error?: string }> {
     const url = `http://${BaseUrl}/api/smartRoute/addTunnel`;
     const headers = getDefaultHeaders(cookie);
 
@@ -191,7 +191,35 @@ async function addTunnel(cookie: string, regionCode: string, countryCode: string
         const response = await axios.post(url, data, { headers });
         return {
             success: response.data && response.data.success === true,
-            data: {}
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+async function setCategoryStates(
+    cookie: string,
+    states: { [key: string]: number },
+    pornStateChanged: boolean,
+    socialStateChanged: boolean,
+    gameStateChanged: boolean
+): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/security/setCategoryStates`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        states,
+        pornStateChanged,
+        socialStateChanged,
+        gameStateChanged,
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
         };
     } catch (error) {
         return {
@@ -201,4 +229,32 @@ async function addTunnel(cookie: string, regionCode: string, countryCode: string
     }
 }
 
-export { loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
+async function getUrlFilterData(cookie: string): Promise<{ success: boolean; data?: { [key: string]: number }; error?: string }> {
+    const url = `http://${BaseUrl}/api/security/getUrlFilterData`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        const categoryStates = response.data?.categoryStates;
+        console.log('getUrlFilterData response data:', response.data);
+        if (categoryStates && typeof categoryStates === 'object') {
+            return {
+                success: true,
+                data: categoryStates as { [key: string]: number },
+            };
+        } else {
+            return {
+                success: false,
+                error: 'No categoryStates data found',
+            };
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+export {getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
