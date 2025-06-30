@@ -13,6 +13,11 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@types/express": "^5.0.3",
     "axios": "^1.9.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "it-pipe": "^3.0.1",
+    "libp2p": "^2.8.12",
+    "libp2p-tcp": "^0.17.2",
+    "peer-id": "^0.16.0",
+    "uint8arraylist": "^2.4.8"
   }
 }

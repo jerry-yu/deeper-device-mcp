@@ -8,7 +8,16 @@ import { z } from 'zod';
 import { CallToolResult, isInitializeRequest, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import { loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, setBaseUrl, addTunnel } from './functions';
 
+import { createLibp2p } from 'libp2p';
+import { tcp } from '@libp2p/tcp';
+import { noise } from '@chainsafe/libp2p-noise';
+import { yamux } from '@chainsafe/libp2p-yamux';
+import { multiaddr } from 'multiformats/multiaddr';
+import { PeerId } from 'peer-id';
+import { pipe } from 'it-pipe';
+
 let cookie: string | null = null;
+let libp2pNode: Awaited<ReturnType<typeof createNode>>;
 
 // Global mapping of DPN modes to their corresponding tunnel codes
 // This record is mutable and will be updated in getDpnMode to reflect the latest mapping.
@@ -16,6 +25,33 @@ const DPN_MODE_TUNNEL_CODE: Record<string, string> = {
   'direct': 'DIRECT'
 };
 
+async function createNode() {
+  const node = await createLibp2p({
+    transports: [
+      tcp()
+    ],
+    connectionEncrypters: [
+      noise()
+    ],
+    streamMuxers: [
+      yamux()
+    ]
+  });
+
+  console.log('Libp2p node started with ID:', node.peerId.toString());
+  console.log('Listening on addresses:', node.getMultiaddrs().map((ma) => ma.toString()));
+
+  node.handle('/mcp/1.0.0', async ({ stream }) => {
+    console.log('Received incoming stream from peer');
+    // Handle incoming stream data here
+    // For now, just log it
+    for await (const chunk of stream.source) {
+      console.log('Received data:', new TextDecoder().decode(chunk));
+    }
+  });
+
+  return node;
+}
 
 const getServer = () => {
   // Create an MCP server with implementation details
@@ -463,12 +499,143 @@ The full list of available tunnel codes can be retrieved via the 'listTunnels' t
     }
   );
 
+  server.tool(
+    'addTunnel',
+    'Adds a new tunnel to the active list, making it available for DPN configuration.',
+    {
+      regionCode: z.string().describe(`Regin code`),
+      tunnelCode: z.string().describe('Tunnel code to add.'),
+    },
+    async ({ regionCode, tunnelCode }): Promise<CallToolResult> => {
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const result = await addTunnel(cookie, regionCode, tunnelCode);
+        if (result.success) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Tunnel "${tunnelCode}" in region "${regionCode}" added successfully.`,
+              }
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `addTunnel failed: ${result.error}`,
+              }
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `addTunnel error: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'connectToPeer',
+    'Connects to a libp2p peer using its multiaddr.',
+    {
+      multiaddr: z.string().describe('The multiaddr of the peer to connect to (e.g., "/ip4/127.0.0.1/tcp/4001/p2p/Qm...").'),
+    },
+    async ({ multiaddr: peerMultiaddr }): Promise<CallToolResult> => {
+      try {
+        const ma = multiaddr(peerMultiaddr);
+        await libp2pNode.dial(ma);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Successfully connected to peer: ${peerMultiaddr}`,
+            }
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Failed to connect to peer ${peerMultiaddr}: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'sendP2PMessage',
+    'Sends a message to a connected libp2p peer.',
+    {
+      peerId: z.string().describe('The PeerId of the connected peer to send the message to.'),
+      message: z.string().describe('The message to send.'),
+    },
+    async ({ peerId, message }): Promise<CallToolResult> => {
+      try {
+        const targetPeerId = PeerId.parse(peerId);
+        const connection = libp2pNode.getConnections(targetPeerId)[0];
+        if (!connection) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No active connection to peer ${peerId}. Please connect first.`,
+              }
+            ],
+          };
+        }
+        const stream = await connection.newStream(['/mcp/1.0.0']);
+        await pipe(
+          [new TextEncoder().encode(message)],
+          stream.sink
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Message sent to peer ${peerId}: ${message}`,
+            }
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Failed to send message to peer ${peerId}: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
   return server;
 }
 
 
 // stdio transport
 async function main() {
+  libp2pNode = await createNode();
   const server = getServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -609,3 +776,33 @@ main().catch(console.error);
 //   console.log('Server shutdown complete');
 //   process.exit(0);
 // });
+
+// process.on('SIGTERM', async () => {
+//   console.log('Shutting down server...');
+
+//   // Close all active transports to properly clean up resources
+//   for (const sessionId in transports) {
+//     try {
+//       console.log(`Closing transport for session ${sessionId}`);
+//       await transports[sessionId].close();
+//       delete transports[sessionId];
+//     } catch (error) {
+//       console.error(`Error closing transport for session ${sessionId}:`, error);
+//     }
+//   }
+//   console.log('Server shutdown complete');
+//   process.exit(0);
+// });
+
+// // HTTP transport
+// // const server = getServer();
+// // const transport = new StreamableHTTPServerTransport();
+// // server.connect(transport);
+
+// // const app = express();
+// // app.use(express.json());
+// // app.post('/mcp', transport.handler);
+// // app.listen(3000, () => console.log('MCP server listening on port 3000'));
+// // console.log('MCP server started on port 3000');
+
+main().catch(console.error);
