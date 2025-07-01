@@ -36,7 +36,7 @@ You are an agent controlling a Deeper Network device. Follow these instructions 
     *   **full**: Routes all traffic through the DPN.
 *   **Tunnel**: A secure connection to a specific country's server, used in 'smart' and 'full' DPN modes.
 *   **Tunnel Code**: A two-letter country code (e.g., 'US', 'JP') that identifies a tunnel.
-*   **Region Code**: A code representing a continent or major region (e.g., 'AMN' for North America, 'EUE' for East Europe). Tunnels are grouped by region.
+*   **Region Code**: A code representing a continent or major region (e.g., 'AMN' for North America, 'ASE' for East Asia). Tunnels are grouped by region.
 *   **App Tunnel**: You can assign a specific tunnel to individual applications, overriding the main DPN mode for that app.
 
 ## Workflow
@@ -415,7 +415,7 @@ The full list of available tunnel codes can be retrieved via the 'listTunnels' t
     'addTunnel',
     'Adds a new tunnel to the active list, making it available for DPN configuration.',
     {
-      regionCode: z.string().describe(`Regin code`),
+      regionCode: z.string().describe(`Regin code(e.g., 'AMN' for North America, 'ASE' for East Asia)`),
       tunnelCode: z.string().describe('Tunnel code to add.'),
     },
     async ({ regionCode, tunnelCode }): Promise<CallToolResult> => {
