@@ -257,4 +257,73 @@ async function getUrlFilterData(cookie: string): Promise<{ success: boolean; dat
     }
 }
 
-export {getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
+async function setAdsFilter(
+    cookie: string,
+    enable: boolean
+): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/tproxy/adsFilter`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        type: 'httpsFilter',
+        enable,
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function setSslBypass(
+    cookie: string,
+    enable: boolean
+): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/tproxy/sslBypass`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        enable,
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function getAdsFilter(
+    cookie: string
+): Promise<{ success: boolean; enable?: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/tproxy/adsFilter`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: response.data && response.data.success === true,
+            enable: response.data?.enable,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+export {getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
