@@ -6,7 +6,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { nullable, z } from 'zod';
 import { CallToolResult, isInitializeRequest, ReadResourceResult, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
-import { getAdsFilter, setSslBypass, setAdsFilter, getUrlFilterData, setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, setBaseUrl, addTunnel } from './functions';
+import { rebootDevice, getAdsFilter, setSslBypass, setAdsFilter, getUrlFilterData, setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, setBaseUrl, addTunnel } from './functions';
 
 let cookie: string | null = null;
 
@@ -676,6 +676,55 @@ The full list of available tunnel codes can be retrieved via the 'listTunnels' t
     }
   );
 
+  server.tool(
+    'rebootDevice',
+    'Reboots the Deeper device.',
+    {},
+    async (): Promise<CallToolResult> => {
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const result = await rebootDevice(cookie);
+        if (result.success) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Device reboot initiated successfully.`,
+              }
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `rebootDevice failed: ${result.error}`,
+              }
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `rebootDevice error: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
   return server;
 }
 
@@ -761,6 +810,16 @@ async function main() {
 //   else {
 //     console.error('Failed to get URL filter data:', urlFilterData2.error);
 //   }
+
+//   const rebootResult = await rebootDevice(cookie);
+//   if (rebootResult.success) {
+//     console.log('Device reboot initiated successfully.');
+//   }
+//   else {
+//     console.error('Failed to initiate device reboot:', rebootResult.error);
+//   }
+//   console.log('Please wait for the device to reboot and reconnect.');
+
 // }
 
 main().catch(console.error);

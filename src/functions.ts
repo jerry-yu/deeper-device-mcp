@@ -2,7 +2,6 @@ import { publicEncrypt } from "node:crypto";
 import publicKey from './public';
 import axios from 'axios';
 
-
 let BaseUrl = '34.34.34.34';
 //let BaseUrl = '192.168.3.57';
 
@@ -326,4 +325,28 @@ async function getAdsFilter(
     }
 }
 
-export {getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
+async function rebootDevice(cookie: string): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/admin/reboot`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        await axios.post(url, undefined, { headers, timeout: 1000 });
+        return { success: true };
+    } catch (error: any) {
+        if (
+            error.code === 'ECONNABORTED' ||
+            error.code === 'ECONNRESET' ||
+            error.message?.includes('aborted') ||
+            error.message?.includes('socket hang up') ||
+            error.message?.includes('timeout')
+        ) {
+            return { success: true };
+        }
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+export {rebootDevice,getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
