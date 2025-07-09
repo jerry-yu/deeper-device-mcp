@@ -198,6 +198,24 @@ async function addTunnel(cookie: string, regionCode: string, countryCode: string
         };
     }
 }
+
+async function deleteTunnels(cookie: string, tunnelCodes: string[]): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/smartRoute/deleteTunnels`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.post(url, tunnelCodes, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
 async function setCategoryStates(
     cookie: string,
     states: { [key: string]: number },
@@ -349,4 +367,4 @@ async function rebootDevice(cookie: string): Promise<{ success: boolean; error?:
     }
 }
 
-export {rebootDevice,getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
+export {deleteTunnels,rebootDevice,getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};

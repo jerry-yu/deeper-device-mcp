@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { setDpnMode, listTunnels, getDpnMode, listApps, addApp, addTunnel } from '../functions';
+import { deleteTunnels,setDpnMode, listTunnels, getDpnMode, listApps, addApp, addTunnel } from '../functions';
 import { getCookie, getDpnTunnelCode, setDpnTunnelCode } from '../state';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -334,4 +334,56 @@ export const addDpnTools = (server: McpServer) => {
       }
     }
   );
+
+  server.tool(
+  'deleteTunnels',
+  'Deletes one or more tunnels from the active list.',
+  {
+    tunnelCodes: z.array(z.string()).describe('An array of tunnel codes to delete.'),
+  },
+  async ({ tunnelCodes }): Promise<CallToolResult> => {
+    const cookie = getCookie();
+    if (!cookie) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+          }
+        ],
+      };
+    }
+    try {
+      const result = await deleteTunnels(cookie, tunnelCodes);
+      if (result.success) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Tunnels deleted successfully: ${tunnelCodes.join(', ')}`,
+            }
+          ],
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `deleteTunnels failed: ${result.error}`,
+            }
+          ],
+        };
+      }
+    } catch (error: any) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `deleteTunnels error: ${error.message || error}`,
+          }
+        ],
+      };
+    }
+  }
+);
 };
