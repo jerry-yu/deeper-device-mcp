@@ -4,6 +4,7 @@ import { addDpnTools } from './tools/dpn';
 import { addParentalTools } from './tools/parental';
 import { addSystemTools } from './tools/system';
 import { instructions } from './instructions';
+import { addAccesscontrolTool } from './tools/access';
 
 export const getServer = () => {
 
@@ -18,6 +19,7 @@ export const getServer = () => {
   addDpnTools(server);
   addParentalTools(server);
   addSystemTools(server);
+  addAccesscontrolTool(server);
 
   return server;
 };

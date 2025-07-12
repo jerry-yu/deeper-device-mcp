@@ -367,4 +367,83 @@ async function rebootDevice(cookie: string): Promise<{ success: boolean; error?:
     }
 }
 
-export {deleteTunnels,rebootDevice,getAdsFilter,setSslBypass,setAdsFilter,getUrlFilterData,setCategoryStates, loginToDeeperDevice, setDpnMode, listTunnels, encryptWithPublicKey, getDpnMode, listApps, addApp ,addTunnel ,setBaseUrl};
+export interface AccessControlDevice {
+    mac: string;
+    createdAt: number;
+    name: string;
+    routeMode: string;
+    regionCode: string | null;
+    httpsFilter: boolean;
+    remark: string;
+    pinned: boolean;
+    bypass: string[];
+    bwLimit: number;
+    ip: string;
+}
+
+interface AccessControlListResponse {
+    online: AccessControlDevice[];
+    offline: AccessControlDevice[];
+}
+
+async function listAccessControl(cookie: string): Promise<{ success: boolean; data?: AccessControlListResponse; error?: string }> {
+    const url = `http://${BaseUrl}/api/accessControl/list`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: true,
+            data: response.data as AccessControlListResponse,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function setOneAccessControl(cookie: string,  updates: AccessControlDevice): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/accessControl/setOne`;
+    const headers = getDefaultHeaders(cookie);
+
+    const data = {
+        ...updates,
+    };
+
+    console.log('setOneAccessControl data:', data);
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+export {
+    deleteTunnels,
+    rebootDevice,
+    getAdsFilter,
+    setSslBypass,
+    setAdsFilter,
+    getUrlFilterData,
+    setCategoryStates,
+    loginToDeeperDevice,
+    setDpnMode,
+    listTunnels,
+    encryptWithPublicKey,
+    getDpnMode,
+    listApps,
+    addApp,
+    addTunnel,
+    setBaseUrl,
+    listAccessControl,
+    setOneAccessControl
+};
+
