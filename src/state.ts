@@ -1,4 +1,7 @@
+import { AccessControlDevice } from "./functions";
+
 let cookie: string | null = null;
+let deviceList: AccessControlDevice[] | null = null;
 
 // Global mapping of DPN modes to their corresponding tunnel codes
 // This record is mutable and will be updated in getDpnMode to reflect the latest mapping.
@@ -9,6 +12,11 @@ const DPN_MODE_TUNNEL_CODE: Record<string, string> = {
 export const getCookie = () => cookie;
 export const setCookie = (newCookie: string) => {
   cookie = newCookie;
+};
+
+export const getDeviceList = () => deviceList;
+export const setDeviceList = (newDeviceList: AccessControlDevice[]) => {
+    deviceList = newDeviceList;
 };
 
 export const getDpnTunnelCode = (mode: string) => DPN_MODE_TUNNEL_CODE[mode];

@@ -426,6 +426,60 @@ async function setOneAccessControl(cookie: string,  updates: AccessControlDevice
     }
 }
 
+async function switchAccessControl(cookie: string, value: boolean): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/accessControl/switch`;
+    const headers = getDefaultHeaders(cookie);
+    const data = { value };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function getAccessControlSwitch(cookie: string): Promise<{ success: boolean; value?: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/accessControl/switch`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: typeof response.data?.value === 'boolean',
+            value: response.data?.value,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+/**
+ * Ensure the access control switch is set to the desired value.
+ * @param cookie Authentication cookie
+ * @param value Desired switch value
+ * @returns {Promise<{ success: boolean; error?: string }>}
+ */
+async function ensureAccessControlSwitch(cookie: string, value: boolean): Promise<{ success: boolean; error?: string }> {
+    const current = await getAccessControlSwitch(cookie);
+    if (!current.success) {
+        return { success: false, error: current.error || 'Failed to get current switch state' };
+    }
+    if (current.value === value) {
+        return { success: true };
+    }
+    const result = await switchAccessControl(cookie, value);
+    return { success: result.success, error: result.error };
+}
+
 export {
     deleteTunnels,
     rebootDevice,
@@ -444,6 +498,9 @@ export {
     addTunnel,
     setBaseUrl,
     listAccessControl,
-    setOneAccessControl
+    setOneAccessControl,
+    switchAccessControl,
+    getAccessControlSwitch,
+    ensureAccessControlSwitch,
 };
 
