@@ -5,6 +5,7 @@ import { addParentalTools } from './tools/parental';
 import { addSystemTools } from './tools/system';
 import { instructions } from './instructions';
 import { addAccesscontrolTool } from './tools/access';
+import { addSharing } from './tools/sharing';
 
 export const getServer = () => {
 
@@ -20,6 +21,7 @@ export const getServer = () => {
   addParentalTools(server);
   addSystemTools(server);
   addAccesscontrolTool(server);
+  addSharing(server);
 
   return server;
 };

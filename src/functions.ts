@@ -480,6 +480,149 @@ async function ensureAccessControlSwitch(cookie: string, value: boolean): Promis
     return { success: result.success, error: result.error };
 }
 
+async function getSharingConfig(
+    cookie: string
+): Promise<{
+    success: boolean;
+    sharingEnabled?: boolean;
+    btEnabled?: boolean;
+    smtpEnabled?: boolean;
+    maxBandwidth?: string;
+    dnsBlacklistForSharing?: boolean;
+    error?: string;
+}> {
+    const url = `http://${BaseUrl}/api/sharing/getSharingConfig`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: response.data?.success === true,
+            sharingEnabled: response.data?.sharingEnabled,
+            btEnabled: response.data?.btEnabled,
+            smtpEnabled: response.data?.smtpEnabled,
+            maxBandwidth: response.data?.maxBandwidth,
+            dnsBlacklistForSharing: response.data?.dnsBlacklistForSharing,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+/**
+ * Generic function to set sharing config (bt, smtp, sharing).
+ * @param cookie Authentication cookie
+ * @param type 'btEnabled' | 'smtpEnabled' | 'sharingEnabled'
+ * @param value boolean value to set
+ */
+async function setSharingConfig(
+    cookie: string,
+    type: 'btEnabled' | 'smtpEnabled' | 'sharingEnabled',
+    value: boolean
+): Promise<{ success: boolean; error?: string }> {
+    let url = '';
+    let data: any = {};
+    const headers = getDefaultHeaders(cookie);
+
+    if (type === 'btEnabled') {
+        url = `http://${BaseUrl}/api/sharing/setBtSharing`;
+        data = { btEnabled: value };
+    } else if (type === 'smtpEnabled') {
+        url = `http://${BaseUrl}/api/sharing/setSmtpSharing`;
+        data = { smtpEnabled: value };
+    } else if (type === 'sharingEnabled') {
+        url = `http://${BaseUrl}/api/sharing/setSharingState`;
+        data = { sharingEnabled: value };
+    } else {
+        return { success: false, error: 'Invalid sharing config type' };
+    }
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+/**
+ * Set BT sharing state.
+ */
+async function setBtSharing(
+    cookie: string,
+    btEnabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+    return setSharingConfig(cookie, 'btEnabled', btEnabled);
+}
+
+async function setSmtpSharing(cookie: string, smtpEnabled: boolean) {
+    return setSharingConfig(cookie, 'smtpEnabled', smtpEnabled);
+}
+async function setSharingState(cookie: string, sharingEnabled: boolean) {
+    return setSharingConfig(cookie, 'sharingEnabled', sharingEnabled);
+}
+
+/**
+ * Set sharing traffic limit (unit is always GB).
+ * @param cookie Authentication cookie
+ * @param number Monthly traffic limit number (in GB)
+ */
+async function setSharingTrafficLimit(
+    cookie: string,
+    number: number
+): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/sharing/setTrafficLimit`;
+    const headers = getDefaultHeaders(cookie);
+    const data = { number, unit: 'GB' };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+/**
+ * Set sharing bandwidth limit.
+ * @param cookie Authentication cookie
+ * @param number Bandwidth limit number (in Mbps)
+ */
+async function setSharingBandwidthLimit(
+    cookie: string,
+    number: number
+): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/sharing/setBandwidthLimit`;
+    const headers = getDefaultHeaders(cookie);
+    number = number * 1024;
+    const data = { number };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
 export {
     deleteTunnels,
     rebootDevice,
@@ -502,5 +645,12 @@ export {
     switchAccessControl,
     getAccessControlSwitch,
     ensureAccessControlSwitch,
+    setSharingState,
+    setBtSharing,
+    setSharingConfig,
+    getSharingConfig,
+    setSmtpSharing,
+    setSharingTrafficLimit,
+    setSharingBandwidthLimit,
 };
 
