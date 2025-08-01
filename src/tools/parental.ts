@@ -94,10 +94,95 @@ export const addParentalTools = (server: McpServer) => {
   );
 
   server.tool(
-    'setAdsFilter',
-    'Enables or disables the ad filter on the Deeper device.',
+    'setWebCategoryStates',
+    'Configures blocking states for ads, tracker, and malicious using dns filter.',
     {
-      enabled: z.boolean().describe('Set to true to enable ad filtering, false to disable.'),
+      ads: z.number().nullable().describe('Ads category state: 0 (not block), 1 (block)'),
+      tracker: z.number().nullable().describe('Tracker category state: 0 (not block), 1 (block)'),
+      malicious: z.number().nullable().describe('Malicious category state: 0 (not block), 1 (block)'),
+    },
+    async ({ ads, tracker, malicious }): Promise<CallToolResult> => {
+      const cookie = getCookie();
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const filterDataResult = await getUrlFilterData(cookie);
+        if (!filterDataResult.success || !filterDataResult.data) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to get current web category states: ${filterDataResult.error}`,
+              }
+            ],
+          };
+        }
+        let current = filterDataResult.data;
+
+        const adsChanged = (ads !== null);
+        const trackerChanged = (tracker !== null);
+        const maliciousChanged = (malicious !== null);
+
+        if (adsChanged) {
+          current.ads = ads;
+        }
+        if (trackerChanged) {
+          current.tracker = tracker;
+        }
+        if (maliciousChanged) {
+          current.malicious = malicious;
+        }
+
+        const setResult = await setCategoryStates(cookie, current, adsChanged, trackerChanged, maliciousChanged);
+        if (setResult) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Web category states updated. Changed: ${[
+                  adsChanged ? 'ads' : null,
+                  trackerChanged ? 'tracker' : null,
+                  maliciousChanged ? 'malicious' : null
+                ].filter(Boolean).join(', ') || 'none'}.`,
+              }
+            ],
+          };
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to update web category states.`,
+              }
+            ],
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `setWebCategoryStates error: ${error.message || error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'setAdsFilter',
+    'Enables or disables the https ad filter on the Deeper device.',
+    {
+      enabled: z.boolean().describe('Set to true to enable https ad filtering, false to disable.'),
     },
     async ({ enabled }): Promise<CallToolResult> => {
       const cookie = getCookie();
