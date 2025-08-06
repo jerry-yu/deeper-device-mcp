@@ -404,7 +404,7 @@ async function listAccessControl(cookie: string): Promise<{ success: boolean; da
     }
 }
 
-async function setOneAccessControl(cookie: string,  updates: AccessControlDevice): Promise<{ success: boolean; error?: string }> {
+async function setOneAccessControl(cookie: string, updates: AccessControlDevice): Promise<{ success: boolean; error?: string }> {
     const url = `http://${BaseUrl}/api/accessControl/setOne`;
     const headers = getDefaultHeaders(cookie);
 
@@ -623,7 +623,111 @@ async function setSharingBandwidthLimit(
     }
 }
 
+/**
+ * Get session info from the device.
+ * @param cookie Authentication cookie
+ * @returns Session info object
+ */
+async function getSessionInfo(cookie: string): Promise<{
+    success: boolean;
+    data?: {
+        maxSessionNum: string;
+        currSessionNum: string;
+        tcpSessionNum: string;
+        udpSessionNum: string;
+        icmpSessionNum: string;
+        tunnelSessionNum: string;
+    };
+    error?: string;
+}> {
+    const url = `http://${BaseUrl}/api/system-info/session-info`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: true,
+            data: response.data,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function getHardwareInfo(cookie: string): Promise<{
+    success: boolean;
+    data?: {
+        SN: string;
+        deviceId: string;
+        cpuCount: number;
+        cpuModel: string;
+        totalMem: number;
+        tempInCelsius: number;
+    };
+    error?: string;
+}> {
+    const url = `http://${BaseUrl}/api/system-info/hardware-info`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: true,
+            data: response.data,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+
+async function getSoftwareInfo(cookie: string): Promise<{ success: boolean; data?: { softwareVersion: string; appSigVersion: string; builtinRuleVersion: string; urlSigVersion: string }; error?: string }> {
+    const url = `http://${BaseUrl}/api/system-info/software-info`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: true,
+            data: response.data,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function getNetworkAddress(cookie: string): Promise<{ success: boolean; data?: { ip: string; pubIp: string; routerMac: string; gatewayMac: string }; error?: string }> {
+    const url = `http://${BaseUrl}/api/system-info/network-address`;
+    const headers = getDefaultHeaders(cookie);
+
+    try {
+        const response = await axios.get(url, { headers });
+        return {
+            success: true,
+            data: response.data,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
 export {
+    getNetworkAddress,
+    getSoftwareInfo,
+    getHardwareInfo,
+    getSessionInfo,
     deleteTunnels,
     rebootDevice,
     getAdsFilter,

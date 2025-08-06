@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { loginToDeeperDevice, rebootDevice, setBaseUrl as setBaseUrlFunction } from '../functions';
+import { loginToDeeperDevice, rebootDevice, setBaseUrl as setBaseUrlFunction,
+  getSoftwareInfo,getNetworkAddress,getHardwareInfo,getSessionInfo, } from '../functions';
 import { getCookie, setCookie } from '../state';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -104,6 +105,77 @@ export const addSystemTools = (server: McpServer) => {
           }
         ],
       };
+    }
+  );
+
+  server.tool(
+    'getDeeperSystemInfo',
+    'Retrieves system information from the Deeper device.',
+    {},
+    async (): Promise<CallToolResult> => {
+      const cookie = getCookie();
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const [softwareInfo, networkAddress, hardwareInfo, sessionInfo] = await Promise.all([
+          getSoftwareInfo(cookie),
+          getNetworkAddress(cookie),
+          getHardwareInfo(cookie),
+          getSessionInfo(cookie),
+        ]);
+
+        if (
+          !softwareInfo.success ||
+          !networkAddress.success ||
+          !hardwareInfo.success ||
+          !sessionInfo.success
+        ) {
+          const errors = [
+            !softwareInfo.success ? `SoftwareInfo: ${softwareInfo.error}` : '',
+            !networkAddress.success ? `NetworkAddress: ${networkAddress.error}` : '',
+            !hardwareInfo.success ? `HardwareInfo: ${hardwareInfo.error}` : '',
+            !sessionInfo.success ? `SessionInfo: ${sessionInfo.error}` : '',
+          ].filter(Boolean).join('; ');
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to retrieve some system info: ${errors}`,
+              }
+            ],
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Deeper System Info:\n` +
+                `Software Info: ${JSON.stringify(softwareInfo.data, null, 2)}\n` +
+                `Network Address: ${JSON.stringify(networkAddress.data, null, 2)}\n` +
+                `Hardware Info: ${JSON.stringify(hardwareInfo.data, null, 2)}\n` +
+                `Session Info: ${JSON.stringify(sessionInfo.data, null, 2)}`
+            }
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `getDeeperSystemInfo error: ${error.message || error}`,
+            }
+          ],
+        };
+      }
     }
   );
 };
