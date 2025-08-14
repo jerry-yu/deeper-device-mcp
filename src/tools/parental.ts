@@ -38,7 +38,7 @@ export const addParentalTools = (server: McpServer) => {
           };
         }
         let current = filterDataResult.data;
-        console.log('Current parental control states:', current);
+        console.warn('Current parental control states:', current);
 
         const pornStateChanged = (porn !== null);
         const socialStateChanged = (social !== null);
@@ -53,8 +53,8 @@ export const addParentalTools = (server: McpServer) => {
         if (gameStateChanged) {
           current.game = game;
         }
-        console.log('Updated parental control states:', current);
-        console.log('Changes:', pornStateChanged, socialStateChanged, gameStateChanged);
+        console.warn('Updated parental control states:', current);
+        console.warn('Changes:', pornStateChanged, socialStateChanged, gameStateChanged);
 
         const setResult = await setCategoryStates(cookie, current, pornStateChanged, socialStateChanged, gameStateChanged);
         if (setResult) {

@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, addTunnel, deleteTunnels, setCategoryStates, getUrlFilterData, setAdsFilter, setSslBypass, getAdsFilter, rebootDevice, listAccessControl, setOneAccessControl, switchAccessControl, getAccessControlSwitch, ensureAccessControlSwitch, getSharingConfig, setSharingConfig, setSharingTrafficLimit, setSharingBandwidthLimit, getSessionInfo, getHardwareInfo, getSoftwareInfo, getNetworkAddress } from '../functions';
+import { loginToDeeperDevice, setDpnMode, listTunnels, getDpnMode, listApps, addApp, addTunnel, deleteTunnels, setCategoryStates, getUrlFilterData, setAdsFilter, setSslBypass, getAdsFilter, rebootDevice, listAccessControl, setOneAccessControl, switchAccessControl, getAccessControlSwitch, ensureAccessControlSwitch, getSharingConfig, setSharingConfig, setSharingTrafficLimit, setSharingBandwidthLimit, getSessionInfo, getHardwareInfo, getSoftwareInfo, getNetworkAddress, switchNode, refreshTunnel } from '../functions';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -399,4 +399,77 @@ describe('getNetworkAddress', () => {
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ ip: '1.2.3.4' });
   });
+});
+
+describe('refreshTunnel', () => {
+    it('should return success true on success', async () => {
+        mockedAxios.post.mockResolvedValue({ data: { success: true } });
+
+        const result = await refreshTunnel('cookie', 'tunnelCode');
+
+        expect(result.success).toBe(true);
+    });
+
+    it('should return success false on API failure', async () => {
+        mockedAxios.post.mockResolvedValue({ data: { success: false } });
+
+        const result = await refreshTunnel('cookie', 'tunnelCode');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBeUndefined();
+    });
+
+    it('should return success false on network error', async () => {
+        const errorMessage = 'Network Error';
+        mockedAxios.post.mockRejectedValue(new Error(errorMessage));
+
+        const result = await refreshTunnel('cookie', 'tunnelCode');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe(errorMessage);
+    });
+});
+
+describe('switchNode', () => {
+    it('should return success and data on successful switch', async () => {
+        const response = {
+            data: {
+                success: true,
+                activeIp: '1.2.3.4',
+                activeNum: 10,
+            },
+        };
+        mockedAxios.post.mockResolvedValue(response);
+
+        const result = await switchNode('cookie', 'tunnelCode', 'currentIp');
+
+        expect(result.success).toBe(true);
+        expect(result.activeIp).toBe('1.2.3.4');
+        expect(result.activeNum).toBe(10);
+    });
+
+    it('should return success false on API failure', async () => {
+        const response = {
+            data: {
+                success: false,
+            },
+        };
+        mockedAxios.post.mockResolvedValue(response);
+
+        const result = await switchNode('cookie', 'tunnelCode', 'currentIp');
+
+        expect(result.success).toBe(false);
+        expect(result.activeIp).toBeUndefined();
+        expect(result.activeNum).toBeUndefined();
+    });
+
+    it('should return success false on network error', async () => {
+        const errorMessage = 'Network Error';
+        mockedAxios.post.mockRejectedValue(new Error(errorMessage));
+
+        const result = await switchNode('cookie', 'tunnelCode', 'currentIp');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe(errorMessage);
+    });
 });

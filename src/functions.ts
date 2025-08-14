@@ -1,6 +1,7 @@
 import { publicEncrypt } from "node:crypto";
 import publicKey from './public';
 import axios from 'axios';
+import { exec } from "node:child_process";
 
 let BaseUrl = '34.34.34.34';
 //let BaseUrl = '192.168.3.57';
@@ -77,12 +78,54 @@ async function setDpnMode(cookie: string, mode: string, tunnelCode: string): Pro
 
     try {
         const response = await axios.post(url, data, { headers });
-        console.log('setDpnMode response data:', response.data);
+        console.warn('setDpnMode response data:', response.data);
         return response.data && response.data.success === true;
     } catch (error) {
         console.error('Error:', error);
     }
     return false;
+}
+
+async function refreshTunnel(cookie: string, tunnelCode: string): Promise<{ success: boolean; error?: string }> {
+    const url = `http://${BaseUrl}/api/smartRoute/refreshTunnel`;
+    const headers = getDefaultHeaders(cookie);
+    const data = { tunnelCode };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+
+async function switchNode(
+    cookie: string,
+    tunnelCode: string,
+    currentIp: string
+): Promise<{ success: boolean; activeIp?: string; activeNum?: number; error?: string }> {
+    const url = `http://${BaseUrl}/api/smartRoute/switchNode`;
+    const headers = getDefaultHeaders(cookie);
+    const data = { tunnelCode, currentIp };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        return {
+            success: response.data && response.data.success === true,
+            activeIp: response.data?.activeIp,
+            activeNum: response.data?.activeNum,
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
 }
 
 async function listTunnels(cookie: string): Promise<any> {
@@ -253,7 +296,7 @@ async function getUrlFilterData(cookie: string): Promise<{ success: boolean; dat
     try {
         const response = await axios.get(url, { headers });
         const categoryStates = response.data?.categoryStates;
-        console.log('getUrlFilterData response data:', response.data);
+        console.warn('getUrlFilterData response data:', response.data);
         if (categoryStates && typeof categoryStates === 'object') {
             return {
                 success: true,
@@ -412,7 +455,7 @@ async function setOneAccessControl(cookie: string, updates: AccessControlDevice)
         ...updates,
     };
 
-    console.log('setOneAccessControl data:', data);
+    console.warn('setOneAccessControl data:', data);
     try {
         const response = await axios.post(url, data, { headers });
         return {
@@ -705,6 +748,22 @@ async function getSoftwareInfo(cookie: string): Promise<{ success: boolean; data
     }
 }
 
+/**
+ * Ping an IP address to check connectivity.
+ * @param ip IP address to ping
+ * @returns Promise resolving to true if reachable, false otherwise
+ */
+async function pingIp(ip: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        // Use -c 1 for Unix, -n 1 for Windows
+        const platform = process.platform;
+        const cmd = platform === "win32" ? `ping -n 1 ${ip}` : `ping -c 1 ${ip}`;
+        exec(cmd, (error) => {
+            resolve(!error);
+        });
+    });
+}
+
 async function getNetworkAddress(cookie: string): Promise<{ success: boolean; data?: { ip: string; pubIp: string; routerMac: string; gatewayMac: string }; error?: string }> {
     const url = `http://${BaseUrl}/api/system-info/network-address`;
     const headers = getDefaultHeaders(cookie);
@@ -738,6 +797,9 @@ export {
     loginToDeeperDevice,
     setDpnMode,
     listTunnels,
+    switchNode,
+    refreshTunnel,
+    pingIp,
     encryptWithPublicKey,
     getDpnMode,
     listApps,

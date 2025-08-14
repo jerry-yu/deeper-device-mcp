@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { deleteTunnels,setDpnMode, listTunnels, getDpnMode, listApps, addApp, addTunnel } from '../functions';
+import { deleteTunnels,setDpnMode, listTunnels, getDpnMode, listApps, 
+  addApp, addTunnel,pingIp,switchNode,refreshTunnel, } from '../functions';
 import { getCookie, getDpnTunnelCode, setDpnTunnelCode } from '../state';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -41,7 +42,7 @@ export const addDpnTools = (server: McpServer) => {
       }
       const success = await setDpnMode(cookie, dpnMode, tunnelCode);
       if (success) {
-        console.log(`set-dpn-mode successful, dpnMode: ${dpnMode}`);
+        console.warn(`set-dpn-mode successful, dpnMode: ${dpnMode}`);
         return {
           content: [
             {
@@ -56,6 +57,86 @@ export const addDpnTools = (server: McpServer) => {
             {
               type: 'text',
               text: `set Deeper device DPN mode to ${dpnMode} failed`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'testTunnelsConnectivity',
+    'Tests the connectivity of tunnels active ip.',
+    {},
+    async (): Promise<CallToolResult> => {
+      const cookie = getCookie();
+      if (!cookie) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Please login to Deeper device first using loginToDeeperDevice tool.`,
+            }
+          ],
+        };
+      }
+      try {
+        const tunnelsResult = await listTunnels(cookie);
+        if (!tunnelsResult.success || !Array.isArray(tunnelsResult.data)) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Failed to list tunnels: ${tunnelsResult.error}`,
+              }
+            ],
+          };
+        }
+
+        const tunnels = tunnelsResult.data;
+        const actions: string[] = [];
+        for (const tunnel of tunnels) {
+          const { tunnelCode, activeIp, activeNum } = tunnel;
+          if (!activeIp) {
+            actions.push(`Tunnel ${tunnelCode} has no active IP.`);
+            continue;
+          }
+          const success = await pingIp(activeIp);
+          if (success) {
+            actions.push(`Tunnel ${tunnelCode} (${activeIp}) is reachable.`);
+          } else {
+            if (activeNum > 1) {
+              const switchResult = await switchNode(cookie, tunnelCode,activeIp);
+              if (switchResult.success) {
+                actions.push(`Tunnel ${tunnelCode} (${activeIp}) unreachable, switched node successfully.`);
+              } else {
+                actions.push(`Tunnel ${tunnelCode} (${activeIp}) unreachable, failed to switch node: ${switchResult.error}`);
+              }
+            } else {
+              const refreshResult = await refreshTunnel(cookie, tunnelCode);
+              if (refreshResult.success) {
+                actions.push(`Tunnel ${tunnelCode} (${activeIp}) unreachable, refreshed tunnel successfully.`);
+              } else {
+                actions.push(`Tunnel ${tunnelCode} (${activeIp}) unreachable, failed to refresh tunnel: ${refreshResult.error}`);
+              }
+            }
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: actions.join('\n'),
+            }
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `testTunnelsConnectivity error: ${error.message || error}`,
             }
           ],
         };

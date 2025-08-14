@@ -7,13 +7,13 @@ const MCP_PORT = 3000;
 
 async function main(arg: string | undefined) {
   if (arg === 'stdio') {
-    console.log('Starting MCP server with Stdio transport...');
+    console.warn('Starting MCP server with Stdio transport...');
     const server = getServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
     return;
   }
-  console.log('Starting MCP server with SSE transport...');
+  console.warn('Starting MCP server with SSE transport...');
 
   const app = express();
   app.use(express.json());
@@ -23,7 +23,7 @@ async function main(arg: string | undefined) {
 
   // SSE endpoint for establishing the stream
   app.get('/mcp', async (req: Request, res: Response) => {
-    console.log('Received GET request to /sse (establishing SSE stream)');
+    console.warn('Received GET request to /sse (establishing SSE stream)');
 
     try {
       // Create a new SSE transport for the client
@@ -36,7 +36,7 @@ async function main(arg: string | undefined) {
 
       // Set up onclose handler to clean up transport when closed
       transport.onclose = () => {
-        console.log(`SSE transport closed for session ${sessionId}`);
+        console.warn(`SSE transport closed for session ${sessionId}`);
         delete transports[sessionId];
       };
 
@@ -44,7 +44,7 @@ async function main(arg: string | undefined) {
       const server = getServer();
       await server.connect(transport);
 
-      console.log(`Established SSE stream with session ID: ${sessionId}`);
+      console.warn(`Established SSE stream with session ID: ${sessionId}`);
     } catch (error) {
       console.error('Error establishing SSE stream:', error);
       if (!res.headersSent) {
@@ -55,7 +55,7 @@ async function main(arg: string | undefined) {
 
   // Messages endpoint for receiving client JSON-RPC requests
   app.post('/messages', async (req: Request, res: Response) => {
-    console.log('Received POST request to /sse');
+    console.warn('Received POST request to /sse');
 
     // Extract session ID from URL query parameter
     // In the SSE protocol, this is added by the client based on the endpoint event
@@ -87,24 +87,24 @@ async function main(arg: string | undefined) {
 
   // Start the server
   app.listen(MCP_PORT, () => {
-    console.log(`Simple SSE Server listening on port ${MCP_PORT}`);
+    console.warn(`Simple SSE Server listening on port ${MCP_PORT}`);
   });
 
   // Handle server shutdown
   process.on('SIGINT', async () => {
-    console.log('Shutting down server...');
+    console.warn('Shutting down server...');
 
     // Close all active transports to properly clean up resources
     for (const sessionId in transports) {
       try {
-        console.log(`Closing transport for session ${sessionId}`);
+        console.warn(`Closing transport for session ${sessionId}`);
         await transports[sessionId].close();
         delete transports[sessionId];
       } catch (error) {
         console.error(`Error closing transport for session ${sessionId}:`, error);
       }
     }
-    console.log('Server shutdown complete');
+    console.warn('Server shutdown complete');
     process.exit(0);
   });
 
@@ -125,22 +125,22 @@ async function main(arg: string | undefined) {
 //   }
 //   const tunnels = await listTunnels(cookie);
 //   if (tunnels.success) {
-//     console.log('Available tunnels:', tunnels.data);
+//     console.warn('Available tunnels:', tunnels.data);
 //   }
 //   const models = await getDpnMode(cookie);
 //   if (models.success) {
-//     console.log('Current DPN mode:', models.data);
+//     console.warn('Current DPN mode:', models.data);
 //   }
 //   const setResult = await setDpnMode(cookie, 'smart', 'KR');
 //   if (setResult) {
-//     console.log('DPN mode set successfully.');
+//     console.warn('DPN mode set successfully.');
 //   }
 //   else {
 //     console.error('Failed to set DPN mode.');
 //   }
 //   const apps = await listApps(cookie);
 //   if (apps.success) {
-//     console.log('Available apps:', apps.data);
+//     console.warn('Available apps:', apps.data);
 //   }
 //   else {
 //     console.error('Failed to list apps:', apps.error);
@@ -148,14 +148,14 @@ async function main(arg: string | undefined) {
 
 //   const addResult = await addApp(cookie, 'nbaLeaguePass', 'KR');
 //   if (addResult.success) {
-//     console.log('App added successfully:');
+//     console.warn('App added successfully:');
 //   } else {
 //     console.error('Failed to add app:', addResult.error);
 //   }
 
 //   const urlFilterData = await getUrlFilterData(cookie);
 //   if (urlFilterData.success && urlFilterData.data) {
-//     console.log('Current URL filter data:', urlFilterData.data);
+//     console.warn('Current URL filter data:', urlFilterData.data);
 //   }
 //   else {
 //     console.error('Failed to get URL filter data:', urlFilterData.error);
@@ -175,7 +175,7 @@ async function main(arg: string | undefined) {
 
 //   const parentalControlResult = await setCategoryStates(cookie, curFilterData, true, false, false);
 //   if (parentalControlResult) {
-//     console.log('Parental control states updated successfully.');
+//     console.warn('Parental control states updated successfully.');
 //   }
 //   else {
 //     console.error('Failed to update parental control states.');
@@ -183,7 +183,7 @@ async function main(arg: string | undefined) {
 
 //   const urlFilterData2 = await getUrlFilterData(cookie);
 //   if (urlFilterData2.success && urlFilterData2.data) {
-//     console.log('Current URL filter data:', urlFilterData2.data);
+//     console.warn('Current URL filter data:', urlFilterData2.data);
 //   }
 //   else {
 //     console.error('Failed to get URL filter data:', urlFilterData2.error);
@@ -191,16 +191,16 @@ async function main(arg: string | undefined) {
 
 //   // const rebootResult = await rebootDevice(cookie);
 //   // if (rebootResult.success) {
-//   //   console.log('Device reboot initiated successfully.');
+//   //   console.warn('Device reboot initiated successfully.');
 //   // }
 //   // else {
 //   //   console.error('Failed to initiate device reboot:', rebootResult.error);
 //   // }
-//   // console.log('Please wait for the device to reboot and reconnect.');
+//   // console.warn('Please wait for the device to reboot and reconnect.');
 
 //   const listAccessControlResult = await listAccessControl(cookie);
 //   if (listAccessControlResult.success) {
-//     console.log('Current access control settings:', listAccessControlResult.data);
+//     console.warn('Current access control settings:', listAccessControlResult.data);
 //   }
 //   else {
 //     console.error('Failed to list access control:', listAccessControlResult.error);
@@ -221,7 +221,7 @@ async function main(arg: string | undefined) {
 //   }
 //   );
 //   if (setAccessControlResult.success) {
-//     console.log('Access control set successfully.');
+//     console.warn('Access control set successfully.');
 //   }
 //   else {
 //     console.error('Failed to set access control:', setAccessControlResult.error);
@@ -229,7 +229,7 @@ async function main(arg: string | undefined) {
 
 //   const listAccessControlResult2 = await listAccessControl(cookie);
 //   if (listAccessControlResult2.success) {
-//     console.log('Current access control settings:', listAccessControlResult2.data);
+//     console.warn('Current access control settings:', listAccessControlResult2.data);
 //   }
 //   else {
 //     console.error('Failed to list access control:', listAccessControlResult2.error);

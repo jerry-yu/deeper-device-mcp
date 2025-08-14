@@ -17,7 +17,7 @@ export const addSystemTools = (server: McpServer) => {
       const result = await loginToDeeperDevice(username, password);
       if (result.success) {
         setCookie(result.data); // Store the cookie for future use
-        console.log(`Login successful, cookie: ${getCookie()}`);
+        console.warn(`Login successful, cookie: ${getCookie()}`);
         return {
           content: [
             {
